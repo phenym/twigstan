@@ -67,33 +67,53 @@ final class TwigScopeInjector
 
         foreach ($collectedData as $data) {
             if ($data->collecterType === MacroCollector::class) {
-                $macros[$data->filePath] = $data->data['macros'];
+                // PHPStan aggregates collector results per file, creating an extra array level
+                foreach ($data->data as $nodeResults) {
+                    foreach ($nodeResults as $macroData) {
+                        // Skip null entries or entries without required macros key
+                        if ( ! is_array($macroData) || ! isset($macroData['macros'])) {
+                            continue;
+                        }
+
+                        $macros[$data->filePath] = $macroData['macros'];
+                    }
+                }
             } elseif ($data->collecterType === BlockContextCollector::class) {
-                $phpDocNode = $this->phpDocParser->parseTagValue(
-                    new TokenIterator($this->lexer->tokenize($data->data['context'])),
-                    '@var',
-                );
+                // PHPStan aggregates collector results per file, creating an extra array level
+                foreach ($data->data as $nodeResults) {
+                    foreach ($nodeResults as $blockData) {
+                        // Skip null entries or entries without required context key
+                        if ( ! is_array($blockData) || ! isset($blockData['context'])) {
+                            continue;
+                        }
 
-                if ( ! $phpDocNode instanceof VarTagValueNode) {
-                    throw new LogicException('Invalid @var tag.');
+                        $phpDocNode = $this->phpDocParser->parseTagValue(
+                            new TokenIterator($this->lexer->tokenize($blockData['context'])),
+                            '@var',
+                        );
+
+                        if ( ! $phpDocNode instanceof VarTagValueNode) {
+                            throw new LogicException('Invalid @var tag.');
+                        }
+
+                        $context = $phpDocNode->type;
+
+                        if ( ! $context instanceof ArrayShapeNode) {
+                            $context = ArrayShapeNode::createSealed([]);
+                        }
+
+                        $sourceLocation = SourceLocation::decode($blockData['sourceLocation']);
+
+                        $contextBeforeBlockByFilename[$sourceLocation->last()->fileName][] = [
+                            'blockName' => $blockData['blockName'],
+                            'sourceLocation' => $sourceLocation,
+                            'context' => $context,
+                            'parent' => $blockData['parent'],
+                            'relatedBlockName' => $blockData['relatedBlockName'],
+                            'relatedParent' => $blockData['relatedParent'],
+                        ];
+                    }
                 }
-
-                $context = $phpDocNode->type;
-
-                if ( ! $context instanceof ArrayShapeNode) {
-                    $context = ArrayShapeNode::createSealed([]);
-                }
-
-                $sourceLocation = SourceLocation::decode($data->data['sourceLocation']);
-
-                $contextBeforeBlockByFilename[$sourceLocation->last()->fileName][] = [
-                    'blockName' => $data->data['blockName'],
-                    'sourceLocation' => $sourceLocation,
-                    'context' => $context,
-                    'parent' => $data->data['parent'],
-                    'relatedBlockName' => $data->data['relatedBlockName'],
-                    'relatedParent' => $data->data['relatedParent'],
-                ];
             }
         }
 

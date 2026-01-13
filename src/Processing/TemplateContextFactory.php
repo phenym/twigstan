@@ -23,11 +23,15 @@ final readonly class TemplateContextFactory
         $templateContext = [];
         foreach ($analysisResult->collectedData as $data) {
             if (is_a($data->collecterType, TemplateContextCollector::class, true)) {
-                foreach ($data->data as $renderData) {
-                    $template = $this->twigFileCanonicalizer->absolute($renderData['template']);
-                    $sourceLocation = SourceLocation::decode($renderData['sourceLocation']);
+                // PHPStan aggregates collector results per file, creating an extra array level
+                // $data->data is list<list<TemplateData>> not list<TemplateData>
+                foreach ($data->data as $nodeResults) {
+                    foreach ($nodeResults as $renderData) {
+                        $template = $this->twigFileCanonicalizer->absolute($renderData['template']);
+                        $sourceLocation = SourceLocation::decode($renderData['sourceLocation']);
 
-                    $templateContext[$template][$sourceLocation->getHash()] = [$sourceLocation, $renderData['context']];
+                        $templateContext[$template][$sourceLocation->getHash()] = [$sourceLocation, $renderData['context']];
+                    }
                 }
             }
         }
