@@ -67,52 +67,48 @@ final class TwigScopeInjector
 
         foreach ($collectedData as $data) {
             if ($data->collecterType === MacroCollector::class) {
-                // PHPStan aggregates collector results per file, creating an extra array level
-                foreach ($data->data as $nodeResults) {
-                    foreach ($nodeResults as $macroData) {
-                        // Skip null entries or entries without required macros key
-                        if ( ! is_array($macroData) || ! isset($macroData['macros'])) {
-                            continue;
-                        }
-
-                        $macros[$data->filePath] = $macroData['macros'];
+                // PHPStan aggregates collector results per file, creating a list of results
+                foreach ($data->data as $macroData) {
+                    // Skip null entries or entries without required macros key
+                    if ( ! is_array($macroData) || ! isset($macroData['macros'])) {
+                        continue;
                     }
+
+                    $macros[$data->filePath] = $macroData['macros'];
                 }
             } elseif ($data->collecterType === BlockContextCollector::class) {
-                // PHPStan aggregates collector results per file, creating an extra array level
-                foreach ($data->data as $nodeResults) {
-                    foreach ($nodeResults as $blockData) {
-                        // Skip null entries or entries without required context key
-                        if ( ! is_array($blockData) || ! isset($blockData['context'])) {
-                            continue;
-                        }
-
-                        $phpDocNode = $this->phpDocParser->parseTagValue(
-                            new TokenIterator($this->lexer->tokenize($blockData['context'])),
-                            '@var',
-                        );
-
-                        if ( ! $phpDocNode instanceof VarTagValueNode) {
-                            throw new LogicException('Invalid @var tag.');
-                        }
-
-                        $context = $phpDocNode->type;
-
-                        if ( ! $context instanceof ArrayShapeNode) {
-                            $context = ArrayShapeNode::createSealed([]);
-                        }
-
-                        $sourceLocation = SourceLocation::decode($blockData['sourceLocation']);
-
-                        $contextBeforeBlockByFilename[$sourceLocation->last()->fileName][] = [
-                            'blockName' => $blockData['blockName'],
-                            'sourceLocation' => $sourceLocation,
-                            'context' => $context,
-                            'parent' => $blockData['parent'],
-                            'relatedBlockName' => $blockData['relatedBlockName'],
-                            'relatedParent' => $blockData['relatedParent'],
-                        ];
+                // PHPStan aggregates collector results per file, creating a list of results
+                foreach ($data->data as $blockData) {
+                    // Skip null entries or entries without required context key
+                    if ( ! is_array($blockData) || ! isset($blockData['context'])) {
+                        continue;
                     }
+
+                    $phpDocNode = $this->phpDocParser->parseTagValue(
+                        new TokenIterator($this->lexer->tokenize($blockData['context'])),
+                        '@var',
+                    );
+
+                    if ( ! $phpDocNode instanceof VarTagValueNode) {
+                        throw new LogicException('Invalid @var tag.');
+                    }
+
+                    $context = $phpDocNode->type;
+
+                    if ( ! $context instanceof ArrayShapeNode) {
+                        $context = ArrayShapeNode::createSealed([]);
+                    }
+
+                    $sourceLocation = SourceLocation::decode($blockData['sourceLocation']);
+
+                    $contextBeforeBlockByFilename[$sourceLocation->last()->fileName][] = [
+                        'blockName' => $blockData['blockName'],
+                        'sourceLocation' => $sourceLocation,
+                        'context' => $context,
+                        'parent' => $blockData['parent'],
+                        'relatedBlockName' => $blockData['relatedBlockName'],
+                        'relatedParent' => $blockData['relatedParent'],
+                    ];
                 }
             }
         }

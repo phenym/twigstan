@@ -246,7 +246,7 @@ final readonly class GetAttributeCheck
 
                 $methodName = $prefix . $propertyOrMethod;
                 // @phpstan-ignore phpstanApi.method
-                [, $methodReflection] = $this->methodCallCheck->check($scope, $methodName, new TypeExpr($objectType));
+                [, $methodReflection] = $this->methodCallCheck->check($scope, $methodName, new TypeExpr($objectType), new Identifier($methodName));
 
                 if ($methodReflection === null) {
                     continue;
