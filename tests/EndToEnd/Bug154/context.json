@@ -8,13 +8,13 @@
     "sub-include.twig": [
         [
             "include.twig:3",
-            "array{app: Symfony\\Bridge\\Twig\\AppVariable}"
+            "array{app: Symfony\\Bridge\\Twig\\AppVariable, title: 'Welcome'}"
         ]
     ],
     "include.twig": [
         [
             "page.twig:5",
-            "array{}"
+            "array{app: Symfony\\Bridge\\Twig\\AppVariable, title: 'Welcome'}"
         ]
     ]
 }
