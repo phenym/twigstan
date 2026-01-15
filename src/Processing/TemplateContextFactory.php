@@ -40,6 +40,7 @@ final readonly class TemplateContextFactory
                         if ( ! is_array($renderData) || ! isset($renderData['template'])) {
                             continue;
                         }
+
                         $template = $this->twigFileCanonicalizer->absolute($renderData['template']);
                         $sourceLocation = SourceLocation::decode($renderData['sourceLocation']);
 
