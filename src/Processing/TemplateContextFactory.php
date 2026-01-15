@@ -23,24 +23,10 @@ final readonly class TemplateContextFactory
         $templateContext = [];
         foreach ($analysisResult->collectedData as $data) {
             if (is_a($data->collecterType, TemplateContextCollector::class, true)) {
-                // PHPStan aggregates collector results per file
-                // In PHPStan 2.1+, data is list<list<TemplateData>>
-                // In earlier versions, data might be list<TemplateData>
+                // PHPStan aggregates collector results per file, creating an extra array level
+                // $data->data is list<list<TemplateData>> not list<TemplateData>
                 foreach ($data->data as $nodeResults) {
-                    // Check if this is a TemplateData directly or a list of TemplateData
-                    if (isset($nodeResults['template'])) {
-                        // Single-nested: $nodeResults is TemplateData
-                        $renderDataList = [$nodeResults];
-                    } else {
-                        // Double-nested: $nodeResults is list<TemplateData>
-                        $renderDataList = $nodeResults;
-                    }
-
-                    foreach ($renderDataList as $renderData) {
-                        if ( ! is_array($renderData) || ! isset($renderData['template'])) {
-                            continue;
-                        }
-
+                    foreach ($nodeResults as $renderData) {
                         $template = $this->twigFileCanonicalizer->absolute($renderData['template']);
                         $sourceLocation = SourceLocation::decode($renderData['sourceLocation']);
 
