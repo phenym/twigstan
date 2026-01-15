@@ -11,6 +11,7 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Scalar\String_;
 use PhpParser\Node\VariadicPlaceholder;
 use PHPStan\Analyser\Scope;
+use ReflectionMethod;
 use PHPStan\Node\Expr\TypeExpr;
 use PHPStan\Reflection\ParametersAcceptorSelector;
 use PHPStan\Reflection\ReflectionProvider;
@@ -246,7 +247,7 @@ final readonly class GetAttributeCheck
 
                 $methodName = $prefix . $propertyOrMethod;
                 // @phpstan-ignore phpstanApi.method
-                [, $methodReflection] = $this->methodCallCheck->check($scope, $methodName, new TypeExpr($objectType), new Identifier($methodName));
+                [, $methodReflection] = $this->callMethodCallCheck($scope, $methodName, new TypeExpr($objectType));
 
                 if ($methodReflection === null) {
                     continue;
@@ -424,5 +425,30 @@ final readonly class GetAttributeCheck
         }
 
         return $errorFormatted;
+    }
+
+    /**
+     * Calls MethodCallCheck::check() with version-appropriate parameters.
+     * PHPStan 2.1+ requires 4 parameters, earlier versions require 3.
+     *
+     * @return array{list<IdentifierRuleError>, \PHPStan\Reflection\MethodReflection|null}
+     */
+    private function callMethodCallCheck(Scope $scope, string $methodName, Expr $var): array
+    {
+        static $requiresFourParams = null;
+
+        if ($requiresFourParams === null) {
+            $reflection = new ReflectionMethod(MethodCallCheck::class, 'check');
+            $requiresFourParams = $reflection->getNumberOfRequiredParameters() >= 4;
+        }
+
+        if ($requiresFourParams) {
+            // PHPStan 2.1+: check(Scope, string, Expr, Identifier|null)
+            return $this->methodCallCheck->check($scope, $methodName, $var, new Identifier($methodName));
+        }
+
+        // PHPStan 2.0.x: check(Scope, string, Expr)
+        // @phpstan-ignore arguments.count
+        return $this->methodCallCheck->check($scope, $methodName, $var);
     }
 }
